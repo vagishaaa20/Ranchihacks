@@ -1,29 +1,39 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-pragma solidity >=0.6.0 <0.9.0;
+contract EvidenceChain {
 
-contract SimpleStorage {
-
-    uint256 favoriteNumber;
-
-    // This is a comment!
-    struct People {
-        uint256 favoriteNumber;
-        string name;
+    struct Evidence {
+        string caseId;
+        string evidenceId;
+        string hash;
+        uint256 timestamp;
     }
 
-    People[] public people;
-    mapping(string => uint256) public nameToFavoriteNumber;
+    mapping(string => Evidence) private evidenceRecords;
 
-    function store(uint256 _favoriteNumber) public {
-        favoriteNumber = _favoriteNumber;
+    event EvidenceAdded(string evidenceId, string hash);
+
+    function addEvidence(
+        string memory _caseId,
+        string memory _evidenceId,
+        string memory _hash
+    ) public {
+        evidenceRecords[_evidenceId] = Evidence(
+            _caseId,
+            _evidenceId,
+            _hash,
+            block.timestamp
+        );
+
+        emit EvidenceAdded(_evidenceId, _hash);
     }
 
-    function retrieve() public view returns (uint256){
-        return favoriteNumber;
-    }
-
-    function addPerson(string memory _name, uint256 _favoriteNumber) public {
-        people.push(People(_favoriteNumber, _name));
-        nameToFavoriteNumber[_name] = _favoriteNumber;
+    function getEvidenceHash(string memory _evidenceId)
+        public
+        view
+        returns (string memory)
+    {
+        return evidenceRecords[_evidenceId].hash;
     }
 }

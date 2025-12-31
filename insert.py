@@ -1,126 +1,71 @@
 import os
-import uuid
-import struct
 import hashlib
 from datetime import datetime
-from error import *
-from collections import namedtuple
+from web3 import Web3
 
-def insert(case_id, item_id, file_path):
+# ---------------- CONFIG ---------------- #
 
-    print_case_count = 0
+GANACHE_URL = "http://127.0.0.1:7545"
+CONTRACT_ADDRESS = "PASTE_DEPLOYED_CONTRACT_ADDRESS_HERE"
+ABI_PATH = "compiled_code.json"
 
-    success = ''
+# -------------------------------------- #
 
-    case_id = case_id.replace("-", "")
-    rev_case_id = ""
-
-    for i in range(0, len(case_id), 2):
-        rev_case_id = case_id[i]+case_id[i+1] + rev_case_id
-
-    case_id = rev_case_id
-
-
-    try:
-        fp = open(file_path, 'rb')
-        fp.close()
-    except:
-
-        block_head_format = struct.Struct('20s d 16s I 11s I')
-        block_head = namedtuple('Block_Head', 'hash timestamp case_id item_id state length')
-        block_data = namedtuple('Block_Data', 'data')
-
-        now = datetime.now()
-        timestamp = datetime.timestamp(now)
-        head_values = (str.encode(""), timestamp, str.encode(
-            ""), 0, str.encode("INITIAL"), 14)
-        data_value = (str.encode("Initial block"))
-        block_data_format = struct.Struct('14s')
-        packed_head_values = block_head_format.pack(*head_values)
-        packed_data_values = block_data_format.pack(data_value)
-        curr_block_head = block_head._make(
-            block_head_format.unpack(packed_head_values))
-        curr_block_data = block_data._make(
-            block_data_format.unpack(packed_data_values))
-
-        # print(curr_block_head)
-        # print(curr_block_data)
-
-        fp = open(file_path, 'wb')
-        fp.write(packed_head_values)
-        fp.write(packed_data_values)
-        fp.close()
-
-    fp = open(file_path, 'rb')
-
-    block_head_format = struct.Struct('20s d 16s I 11s I')
-
-    block_head = namedtuple('Block_Head', 'hash timestamp case_id item_id state length')
-    block_data = namedtuple('Block_Data', 'data')
-
-    prev_hash = ''
-    prev_id = []
-
-    while True:
-
-        try:
-            head_content = fp.read(block_head_format.size)
-            curr_block_head = block_head._make(block_head_format.unpack(head_content))
-            prev_id.append(curr_block_head.item_id)
-            block_data_format = struct.Struct(str(curr_block_head.length)+'s')
-            data_content = fp.read(curr_block_head.length)
-            curr_block_data = block_data._make(block_data_format.unpack(data_content))
-            
-            prev_hash = hashlib.sha1(head_content+data_content).digest()
-
-        except:
-            # print("Last Block Recorded")
-            break
+def generate_video_hash(file_path):
+    sha256 = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            sha256.update(chunk)
+    return sha256.hexdigest()
 
 
-    for i in item_id:
-    
-        if int(i) in prev_id:
-            # print("----Nope----")
-            Duplicate_Entry()
+def insert(case_id, evidence_id, video_path):
 
-        if not print_case_count:
-            print("Case: ", case_id)
-            print_case_count += 1
+    if not os.path.exists(video_path):
+        raise Exception("Video file not found")
 
-        now = datetime.now()
+    # 1️⃣ Generate hash
+    video_hash = generate_video_hash(video_path)
+    timestamp = datetime.utcnow().isoformat()
 
-        # print()
-        
-        timestamp = datetime.timestamp(now)
-        head_values = (prev_hash, timestamp, uuid.UUID(
-            case_id).bytes, int(i), str.encode("CHECKEDIN"), 0)
-        data_value = b''
-        block_data_format = struct.Struct('0s')
-        packed_head_values = block_head_format.pack(*head_values)
-        packed_data_values = block_data_format.pack(data_value)
-        curr_block_head = block_head._make(block_head_format.unpack(packed_head_values))
-        curr_block_data = block_data._make(block_data_format.unpack(packed_data_values))
+    print("📁 Case ID:", case_id)
+    print("🆔 Evidence ID:", evidence_id)
+    print("🔐 Video Hash:", video_hash)
+    print("⏱ Timestamp:", timestamp)
 
-        prev_hash = hashlib.sha1(packed_head_values+packed_data_values).digest()
+    # 2️⃣ Connect to Ethereum
+    web3 = Web3(Web3.HTTPProvider(GANACHE_URL))
+    if not web3.is_connected():
+        raise Exception("Blockchain not connected")
 
-        # print(curr_block_head)
-        # print(curr_block_data)
+    account = web3.eth.accounts[0]
+    web3.eth.default_account = account
 
-        fp = open(file_path, 'ab')
-        fp.write(packed_head_values)
-        fp.write(packed_data_values)
-        fp.close()
+    # 3️⃣ Load ABI
+    import json
+    with open(ABI_PATH) as f:
+        abi = json.load(f)["abi"]
 
+    contract = web3.eth.contract(
+        address=CONTRACT_ADDRESS,
+        abi=abi
+    )
 
-        print("Added item:", i)
-        print("\tStatus: CHECKEDIN")
-        print("\tTime of action:", now.strftime(
-            '%Y-%m-%dT%H:%M:%S.%f') + 'Z')
+    # 4️⃣ Call smart contract
+    tx_hash = contract.functions.addEvidence(
+        evidence_id,
+        case_id,
+        video_hash
+    ).transact()
 
-        success = True
+    receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-    if success:
-        return True
-    else:
-        return False
+    print("✅ Evidence added to blockchain")
+    print("🔗 Tx Hash:", receipt.transactionHash.hex())
+
+    return {
+        "case_id": case_id,
+        "evidence_id": evidence_id,
+        "hash": video_hash,
+        "tx": receipt.transactionHash.hex()
+    }
