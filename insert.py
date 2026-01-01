@@ -7,7 +7,7 @@ from web3 import Web3
 # ---------------- CONFIG ---------------- #
 
 GANACHE_URL = "http://127.0.0.1:7545"
-CONTRACT_ADDRESS = "PASTE_DEPLOYED_CONTRACT_ADDRESS_HERE"
+CONTRACT_ADDRESS = "0x485265b6f6E90A0718c750ea1988866Bd357f728"
 ABI_PATH = "compiled_code.json"
 
 # --------------------------------------- #
@@ -30,11 +30,11 @@ def insert(case_id, evidence_id, video_path):
     local_timestamp = datetime.utcnow().isoformat() + "Z"
 
     print("========== EVIDENCE INGESTION ==========")
-    print("📁 Case ID        :", case_id)
-    print("🆔 Evidence ID    :", evidence_id)
-    print("📄 File Path      :", video_path)
-    print("🔐 SHA-256 Hash   :", video_hash)
-    print("⏱ Local Time     :", local_timestamp)
+    print(" Case ID        :", case_id)
+    print(" Evidence ID    :", evidence_id)
+    print(" File Path      :", video_path)
+    print(" SHA-256 Hash   :", video_hash)
+    print(" Local Time     :", local_timestamp)
     print("----------------------------------------")
 
     # 2️⃣ Connect to Ethereum
@@ -50,7 +50,7 @@ def insert(case_id, evidence_id, video_path):
 
     # 3️⃣ Load ABI
     with open(ABI_PATH) as f:
-        abi = json.load(f)["abi"]
+        abi = json.load(f)["contracts"]["SimpleStorage.sol"]["SimpleStorage"]["abi"]
 
     contract = web3.eth.contract(
         address=CONTRACT_ADDRESS,
@@ -68,11 +68,11 @@ def insert(case_id, evidence_id, video_path):
     block = web3.eth.get_block(receipt.blockNumber)
 
     print("----------------------------------------")
-    print("⛓ Blockchain Write Successful")
-    print("📦 Block Number  :", receipt.blockNumber)
-    print("🧾 Tx Hash       :", receipt.transactionHash.hex())
-    print("⛽ Gas Used      :", receipt.gasUsed)
-    print("⏱ Block Time    :", datetime.utcfromtimestamp(block.timestamp).isoformat() + "Z")
+    print(" Blockchain Write Successful")
+    print(" Block Number  :", receipt.blockNumber)
+    print(" Tx Hash       :", receipt.transactionHash.hex())
+    print(" Gas Used      :", receipt.gasUsed)
+    print(" Block Time    :", datetime.utcfromtimestamp(block.timestamp).isoformat() + "Z")
     print("========================================")
 
     # 5️⃣ Return structured result (for backend / frontend)
