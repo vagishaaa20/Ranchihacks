@@ -90,10 +90,8 @@ Implementing blockchain technology to enhance the chain of custody process for f
 - Ensured data integrity and robust system performance through effective fuzzy hash functions.
 - **TechStack:** Solidity, Ethereum, Web3.js, SHA-256, Python, RESTful API, Kubernetes, MySQL
 
-## Installation
+## 🔧 Local Setup (Required)
 
-1. Clone the repository:
-
-   ```bash
-   https://github.com/SHAMSUNDAR20/Uncertainty-in-Chain-of-Custody-for-Image-Forensics-Investigation-Using-Blockchain-Technology.git
-   
+### 1. Create virtual environment
+```bash
+python -m venv venv
